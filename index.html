@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User-Agent Display</title>
+    <style>
+        @media (prefers-color-scheme: light) {
+            body {
+                background-color: #f0f0f0;
+                color: #333;
+            }
+            .block {
+                background-color: #fff;
+                border-color: #ddd;
+            }
+            .title {
+                color: #333;
+            }
+            button {
+                background-color: #f8f9fa;
+                border-color: #ccc;
+                color: #333;
+            }
+        }
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #333;
+                color: #f0f0f0;
+            }
+            .block {
+                background-color: #444;
+                border-color: #666;
+            }
+            .title {
+                color: #fff;
+            }
+            button {
+                background-color: #555;
+                border-color: #777;
+                color: #fff;
+            }
+            a {
+                color: #0096ff;
+                text-decoration: none;
+            }
+            a:hover {
+                text-decoration: underline;
+            }
+        }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 20px;
+        }
+        .block {
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        @media (min-width: 1200px) {
+            .block {
+                max-width: 800px;
+                margin: 20px auto;
+            }
+            .title {
+                font-size: 24px;
+            }
+        }
+        button {
+            border: 1px solid #ccc;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+    </style>
+    <script>
+        function jump_port(port) {
+            let url = window.location.protocol + '//' + window.location.hostname;
+            if (port !== 80) {
+                url += ':' + port;
+            }
+            url += window.location.pathname;
+            window.location.href = url;
+        }
+
+        // 页面加载后执行的逻辑
+        window.onload = function () {
+            // 显示客户端 User-Agent
+            document.getElementById('js-user-agent').querySelector('p').textContent = navigator.userAgent;
+
+            // 检测页面协议是否为 https
+            if (window.location.protocol === 'https:') {
+                hideContentWithWarning();
+            }
+
+            // 使用 IP API 获取访客的 IP 信息
+            fetch('https://api.ip.sb/geoip')
+                .then(response => response.json())
+                .then(data => {
+                    const ipBlock = document.getElementById('ip').querySelector('p');
+                    ipBlock.textContent = `${data.ip} (${data.country})`;
+                    if (data.country_code !== 'CN') {
+                        ipBlock.style.color = 'red';
+                        ipBlock.textContent += ' 请检查是否使用了代理';
+                        document.getElementById('ua2f-status').querySelector('p').textContent += " (在代理下可能不准确)";
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        };
+
+        // 如果页面在 https 协议下，隐藏所有内容并显示警告
+        function hideContentWithWarning() {
+            document.querySelectorAll('.block').forEach(el => el.style.display = 'none');
+            const messageDiv = document.createElement('div');
+            messageDiv.textContent = '此网页无法在 https 下正常工作';
+            messageDiv.style.padding = '20px';
+            messageDiv.style.marginTop = '20px';
+            messageDiv.style.backgroundColor = '#ffcccc';
+            messageDiv.style.textAlign = 'center';
+            messageDiv.style.border = '1px solid #ffaaaa';
+            document.body.appendChild(messageDiv);
+        }
+    </script>
+</head>
+<body>
+    <div class="block" id="js-user-agent">
+        <h2 class="title">用户端 User-Agent:</h2>
+        <p></p>
+    </div>
+    <div class="block" id="ip">
+        <h2 class="title">IP 地址:</h2>
+        <p>加载中...</p>
+    </div>
+    <div class="block" id="port">
+        <h2 class="title">端口:</h2>
+        <p>
+            <script>
+                document.write(window.location.port || '80');
+            </script>
+        </p>
+        <button onclick="jump_port(window.location.port === '80' ? 2333 : 80)">
+            切换端口
+        </button>
+    </div>
+    <div class="block" id="ua2f-status">
+        <h2 class="title"><a href="https://github.com/Zxilly/UA2F" target="_blank">UA2F</a> 推测状态:</h2>
+        <p>未知</p>
+    </div>
+</body>
+</html>
