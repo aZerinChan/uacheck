@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User-Agent 显示</title>
+    <title>IP + User-Agent 检测</title>
     <style>
         @media (prefers-color-scheme: light) {
             body { background-color: #f0f0f0; color: #333; }
@@ -93,118 +93,133 @@
         }
 
         /* ==========================================================
-         *  IPv4 获取 + 归属地
-         *  主：api.ip.sb/geoip（你原始代码就在用的，已验证 file:// 可用）
-         *  归属地：ip-api.com JSONP（不受 CORS/混合内容限制，自带中文 lang=zh-CN）
+         *  IP 版本判断
          * ========================================================== */
-        function loadIPv4() {
-            var labelEl = document.querySelector('#ip-ipv4 .ip-label');
-            var detailEl = document.querySelector('#ip-ipv4 .ip-detail');
+        function isIPv6(ip) { return ip && ip.indexOf(':') !== -1; }
 
-            // 用你原始代码同样的方式获取 IP
+        /* ==========================================================
+         *  显示 IP 到对应行 + 查归属地
+         * ========================================================== */
+        function displayIPRow(version, ip, countryCode) {
+            var labelEl = document.querySelector('#ip-' + version + ' .ip-label');
+            var detailEl = document.querySelector('#ip-' + version + ' .ip-detail');
+
+            labelEl.textContent = ip;
+            labelEl.className = 'ip-label';
+            detailEl.textContent = '查询归属地中...';
+            detailEl.className = 'ip-detail';
+
+            // JSONP 查归属地（ip-api.com，不受 CORS/混合内容限制，lang=zh-CN 直接返回中文）
+            jsonp('http://ip-api.com/json/' + encodeURIComponent(ip) + '?lang=zh-CN&fields=status,city,isp,proxy,hosting')
+                .then(function(geo) {
+                    if (geo.status === 'success') {
+                        var city = geo.city || '';
+                        var isp = translateISP(geo.isp);
+                        detailEl.textContent = '(' + city + ' \u00B7 ' + isp + ')';
+
+                        if (geo.proxy || geo.hosting) {
+                            detailEl.textContent += ' \u26A0\uFE0F';
+                        }
+
+                        // 非中国大陆标红
+                        if (countryCode && countryCode !== 'CN') {
+                            labelEl.className = 'ip-label error-text';
+                            detailEl.textContent += ' \u8BF7\u68C0\u67E5\u662F\u5426\u4F7F\u7528\u4E86\u4EE3\u7406';
+                            var ua2fEl = document.getElementById('ua2f-status').querySelector('p');
+                            if (ua2fEl.textContent.indexOf('\u4EE3\u7406') === -1) {
+                                ua2fEl.textContent += ' (\u5728\u4EE3\u7406\u4E0B\u53EF\u80FD\u4E0D\u51C6\u786E)';
+                            }
+                        }
+                    } else {
+                        detailEl.textContent = '(\u5F52\u5C5E\u5730\u67E5\u8BE2\u5931\u8D25)';
+                    }
+                })
+                .catch(function() {
+                    detailEl.textContent = '(\u5F52\u5C5E\u5730\u67E5\u8BE2\u5931\u8D25)';
+                });
+        }
+
+        /* ==========================================================
+         *  主入口：获取 IP 并自动路由到 IPv4/IPv6 行
+         *  api.ip.sb/geoip 在 IPv6-only 网络下会返回 IPv6 地址
+         *  需要判断版本后分别显示
+         * ========================================================== */
+        function loadIPs() {
+            // 用原始代码同样的方式获取第一个 IP
             fetch('https://api.ip.sb/geoip')
                 .then(function(response) { return response.json(); })
                 .then(function(data) {
                     if (!data || !data.ip) throw new Error('no ip');
 
                     var ip = data.ip;
-                    labelEl.textContent = ip;
-                    labelEl.className = 'ip-label';
-                    detailEl.textContent = '查询归属地中...';
-                    detailEl.className = 'ip-detail';
+                    var cc = data.country_code || '';
 
-                    // 先用 api.ip.sb 自带的 ISP 信息直接显示
-                    var ispCN = translateISP(data.isp);
-                    var countryCode = data.country_code || '';
-
-                    // 用 JSONP 调 ip-api.com 获取城市（中文）
-                    jsonp('http://ip-api.com/json/' + encodeURIComponent(ip) + '?lang=zh-CN&fields=status,city,isp,proxy,hosting')
-                        .then(function(geo) {
-                            if (geo.status === 'success') {
-                                var city = geo.city || '';
-                                var isp = translateISP(geo.isp);
-                                detailEl.textContent = '(' + city + ' \u00B7 ' + isp + ')';
-
-                                if (geo.proxy || geo.hosting) {
-                                    detailEl.textContent += ' \u26A0\uFE0F';
-                                }
-
-                                // 非中国大陆标红
-                                if (countryCode && countryCode !== 'CN') {
-                                    labelEl.className = 'ip-label error-text';
-                                    detailEl.textContent += ' \u8BF7\u68C0\u67E5\u662F\u5426\u4F7F\u7528\u4E86\u4EE3\u7406';
-                                    var ua2fEl = document.getElementById('ua2f-status').querySelector('p');
-                                    if (ua2fEl.textContent.indexOf('\u4EE3\u7406') === -1) {
-                                        ua2fEl.textContent += ' (\u5728\u4EE3\u7406\u4E0B\u53EF\u80FD\u4E0D\u51C6\u786E)';
-                                    }
-                                }
-                            } else {
-                                // ip-api 失败，用 api.ip.sb 的数据兜底
-                                detailEl.textContent = '(' + ispCN + ')';
-                            }
-                        })
-                        .catch(function() {
-                            // JSONP 也失败了，用 api.ip.sb 的 ISP 兜底
-                            detailEl.textContent = '(' + ispCN + ')';
-                        });
+                    if (isIPv6(ip)) {
+                        // 返回的是 IPv6，显示到 IPv6 行
+                        displayIPRow('ipv6', ip, cc);
+                        // 再尝试获取 IPv4
+                        tryGetIPv4();
+                    } else {
+                        // 返回的是 IPv4，显示到 IPv4 行
+                        displayIPRow('ipv4', ip, cc);
+                        // 再尝试获取 IPv6
+                        tryGetIPv6();
+                    }
                 })
                 .catch(function(err) {
-                    console.warn('IPv4 获取失败:', err);
-                    labelEl.textContent = 'IPv4: 获取失败';
-                    labelEl.className = 'ip-label error-text';
-                    detailEl.textContent = '';
+                    console.warn('api.ip.sb 失败:', err);
+                    // 主接口失败，尝试 JSONP 获取
+                    tryGetIPv4();
+                    tryGetIPv6();
                 });
         }
 
         /* ==========================================================
-         *  IPv6 获取 + 归属地
-         *  api.ip.sb/geoip 在纯 IPv4 环境下可能返回 IPv4，
-         *  所以用 JSONP 调 ip-api.com（它会根据 DNS 返回 IPv6）
+         *  尝试获取 IPv4（用于 IPv6-only 网络下检测是否也有 IPv4）
+         *  使用 JSONP 调 ip-api.com，它会返回调用者的 IP
          * ========================================================== */
-        function loadIPv6() {
-            var labelEl = document.querySelector('#ip-ipv6 .ip-label');
-            var detailEl = document.querySelector('#ip-ipv6 .ip-detail');
-
-            // JSONP 调 ip-api.com，它支持纯 IPv6 域名解析
-            // 用 ipv6 查询接口
-            jsonp('http://edns.ip-api.com/json?lang=zh-CN')
-                .then(function(data) {
-                    var ipv6 = null;
-                    // edns.ip-api.com 返回的 dns 结构中有各个 DNS 服务器的结果
-                    if (data && data.dns) {
-                        for (var i = 0; i < data.dns.length; i++) {
-                            var d = data.dns[i];
-                            if (d.type === 'AAAA' && d.ip) {
-                                ipv6 = d.ip;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (!ipv6) throw new Error('no ipv6');
-
-                    labelEl.textContent = ipv6;
-                    labelEl.className = 'ip-label';
-                    detailEl.textContent = '查询归属地中...';
-                    detailEl.className = 'ip-detail';
-
-                    // 查询归属地
-                    return jsonp('http://ip-api.com/json/' + encodeURIComponent(ipv6) + '?lang=zh-CN&fields=status,city,isp');
-                })
+        function tryGetIPv4() {
+            jsonp('http://ip-api.com/json?lang=zh-CN&fields=status,query,city,isp,proxy,hosting')
                 .then(function(geo) {
-                    if (!geo) return;
-                    if (geo.status === 'success') {
-                        detailEl.textContent = '(' + (geo.city || '') + ' \u00B7 ' + translateISP(geo.isp) + ')';
+                    if (geo.status === 'success' && geo.query && !isIPv6(geo.query)) {
+                        displayIPRow('ipv4', geo.query, '');
                     } else {
-                        detailEl.textContent = '(归属地查询失败)';
-                        detailEl.className = 'ip-detail error-text';
+                        // 返回的还是 IPv6 → 纯 IPv6 网络
+                        var labelEl = document.querySelector('#ip-ipv4 .ip-label');
+                        labelEl.textContent = 'IPv4: 不具备 IPv4 网络';
+                        labelEl.className = 'ip-label error-text';
                     }
                 })
-                .catch(function(err) {
-                    console.warn('IPv6:', err.message || err);
-                    labelEl.textContent = 'IPv6: 不支持或不具备 IPv6 网络';
+                .catch(function() {
+                    // 请求失败
+                    var labelEl = document.querySelector('#ip-ipv4 .ip-label');
+                    labelEl.textContent = 'IPv4: 检测失败';
                     labelEl.className = 'ip-label error-text';
-                    detailEl.textContent = '';
+                });
+        }
+
+        /* ==========================================================
+         *  尝试获取 IPv6
+         *  使用 JSONP 调 ip-api.com，看是否返回 IPv6 地址
+         * ========================================================== */
+        function tryGetIPv6() {
+            jsonp('http://ip-api.com/json?lang=zh-CN&fields=status,query,city,isp')
+                .then(function(geo) {
+                    if (geo.status === 'success' && geo.query && isIPv6(geo.query)) {
+                        displayIPRow('ipv6', geo.query, '');
+                    } else {
+                        // 返回的是 IPv4 → 两种可能：真没有 IPv6，或者 DNS 优先走了 IPv4
+                        var labelEl = document.querySelector('#ip-ipv6 .ip-label');
+                        labelEl.textContent = 'IPv6: 未检测到';
+                        labelEl.className = 'ip-label error-text';
+                        var detailEl = document.querySelector('#ip-ipv6 .ip-detail');
+                        detailEl.textContent = '(当前网络出口为 IPv4，可能有 IPv6 但 DNS 未优先使用)';
+                    }
+                })
+                .catch(function() {
+                    var labelEl = document.querySelector('#ip-ipv6 .ip-label');
+                    labelEl.textContent = 'IPv6: 检测失败';
+                    labelEl.className = 'ip-label error-text';
                 });
         }
 
@@ -231,14 +246,15 @@
             document.getElementById('port-current').textContent = proto + ':' + port;
         }
 
+
+
         /* ==========================================================
          *  页面加载
          * ========================================================== */
         window.onload = function () {
             document.getElementById('js-user-agent').querySelector('p').textContent = navigator.userAgent;
             updatePortDisplay();
-            loadIPv4();
-            loadIPv6();
+            loadIPs();
             detectUA2F();
         };
     </script>
@@ -269,6 +285,8 @@
             <p id="port-target"></p>
         </div>
         <button onclick="jump_port()">切换协议/端口</button>
+    </div>
+
     </div>
 
 </body>
