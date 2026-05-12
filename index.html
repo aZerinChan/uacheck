@@ -3,153 +3,273 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User-Agent Display</title>
+    <title>User-Agent 显示</title>
     <style>
         @media (prefers-color-scheme: light) {
-            body {
-                background-color: #f0f0f0;
-                color: #333;
-            }
-            .block {
-                background-color: #fff;
-                border-color: #ddd;
-            }
-            .title {
-                color: #333;
-            }
-            button {
-                background-color: #f8f9fa;
-                border-color: #ccc;
-                color: #333;
-            }
+            body { background-color: #f0f0f0; color: #333; }
+            .block { background-color: #fff; border-color: #ddd; }
+            .title { color: #333; }
+            button { background-color: #f8f9fa; border-color: #ccc; color: #333; }
         }
         @media (prefers-color-scheme: dark) {
-            body {
-                background-color: #333;
-                color: #f0f0f0;
-            }
-            .block {
-                background-color: #444;
-                border-color: #666;
-            }
-            .title {
-                color: #fff;
-            }
-            button {
-                background-color: #555;
-                border-color: #777;
-                color: #fff;
-            }
-            a {
-                color: #0096ff;
-                text-decoration: none;
-            }
-            a:hover {
-                text-decoration: underline;
-            }
+            body { background-color: #333; color: #f0f0f0; }
+            .block { background-color: #444; border-color: #666; }
+            .title { color: #fff; }
+            button { background-color: #555; border-color: #777; color: #fff; }
+            a { color: #0096ff; text-decoration: none; }
+            a:hover { text-decoration: underline; }
         }
         body {
             font-family: Arial, sans-serif;
-            margin: 20px;
-            padding: 20px;
+            margin: 20px; padding: 20px;
         }
         .block {
-            border: 1px solid #ddd;
-            padding: 20px;
-            margin-bottom: 20px;
-            border-radius: 5px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid #ddd; padding: 20px; margin-bottom: 20px;
+            border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         @media (min-width: 1200px) {
-            .block {
-                max-width: 800px;
-                margin: 20px auto;
-            }
-            .title {
-                font-size: 24px;
-            }
+            .block { max-width: 800px; margin: 20px auto; }
+            .title { font-size: 24px; }
         }
         button {
-            border: 1px solid #ccc;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
+            border: 1px solid #ccc; padding: 10px 20px;
+            border-radius: 5px; cursor: pointer; font-size: 16px;
             margin-top: 10px;
         }
+        button:hover { opacity: 0.85; }
+        .ip-row { margin: 8px 0; padding: 4px 0; }
+        .ip-label { font-weight: bold; display: inline-block; }
+        .ip-detail { color: #888; font-size: 0.9em; }
+        .loading { color: #888; }
+        .error-text { color: #e74c3c; }
+        #port-info p { margin: 4px 0; }
     </style>
     <script>
-        function jump_port(port) {
-            let url = window.location.protocol + '//' + window.location.hostname;
-            if (port !== 80) {
-                url += ':' + port;
+        /* ==========================================================
+         *  运营商翻译（英文 → 中文）
+         * ========================================================== */
+        function translateISP(orgStr) {
+            if (!orgStr) return '未知运营商';
+            if (/telecom|chinanet|ctnet/i.test(orgStr)) return '中国电信';
+            if (/unicom|cu\b/i.test(orgStr)) return '中国联通';
+            if (/mobile|cmcc|cmnet/i.test(orgStr)) return '中国移动';
+            if (/broadnet|cbn|cable/i.test(orgStr)) return '中国广电';
+            if (/cernet|edu/i.test(orgStr)) return '教育网';
+            if (/cstnet|cas/i.test(orgStr)) return '科技网';
+            return orgStr;
+        }
+
+        /* ==========================================================
+         *  JSONP 调用（绕过 CORS 和 HTTPS 混合内容限制）
+         *  ip-api.com 支持 JSONP 回调
+         * ========================================================== */
+        function jsonp(url) {
+            return new Promise(function(resolve, reject) {
+                var cbName = '_jsonp_' + Math.random().toString(36).slice(2);
+                var timer = setTimeout(function() {
+                    cleanup();
+                    reject(new Error('timeout'));
+                }, 8000);
+
+                function cleanup() {
+                    clearTimeout(timer);
+                    delete window[cbName];
+                    var s = document.getElementById(cbName);
+                    if (s) s.remove();
+                }
+
+                window[cbName] = function(data) {
+                    cleanup();
+                    resolve(data);
+                };
+
+                var sep = url.indexOf('?') === -1 ? '?' : '&';
+                var s = document.createElement('script');
+                s.id = cbName;
+                s.src = url + sep + 'callback=' + cbName;
+                s.onerror = function() { cleanup(); reject(new Error('load error')); };
+                document.head.appendChild(s);
+            });
+        }
+
+        /* ==========================================================
+         *  IPv4 获取 + 归属地
+         *  主：api.ip.sb/geoip（你原始代码就在用的，已验证 file:// 可用）
+         *  归属地：ip-api.com JSONP（不受 CORS/混合内容限制，自带中文 lang=zh-CN）
+         * ========================================================== */
+        function loadIPv4() {
+            var labelEl = document.querySelector('#ip-ipv4 .ip-label');
+            var detailEl = document.querySelector('#ip-ipv4 .ip-detail');
+
+            // 用你原始代码同样的方式获取 IP
+            fetch('https://api.ip.sb/geoip')
+                .then(function(response) { return response.json(); })
+                .then(function(data) {
+                    if (!data || !data.ip) throw new Error('no ip');
+
+                    var ip = data.ip;
+                    labelEl.textContent = ip;
+                    labelEl.className = 'ip-label';
+                    detailEl.textContent = '查询归属地中...';
+                    detailEl.className = 'ip-detail';
+
+                    // 先用 api.ip.sb 自带的 ISP 信息直接显示
+                    var ispCN = translateISP(data.isp);
+                    var countryCode = data.country_code || '';
+
+                    // 用 JSONP 调 ip-api.com 获取城市（中文）
+                    jsonp('http://ip-api.com/json/' + encodeURIComponent(ip) + '?lang=zh-CN&fields=status,city,isp,proxy,hosting')
+                        .then(function(geo) {
+                            if (geo.status === 'success') {
+                                var city = geo.city || '';
+                                var isp = translateISP(geo.isp);
+                                detailEl.textContent = '(' + city + ' \u00B7 ' + isp + ')';
+
+                                if (geo.proxy || geo.hosting) {
+                                    detailEl.textContent += ' \u26A0\uFE0F';
+                                }
+
+                                // 非中国大陆标红
+                                if (countryCode && countryCode !== 'CN') {
+                                    labelEl.className = 'ip-label error-text';
+                                    detailEl.textContent += ' \u8BF7\u68C0\u67E5\u662F\u5426\u4F7F\u7528\u4E86\u4EE3\u7406';
+                                    var ua2fEl = document.getElementById('ua2f-status').querySelector('p');
+                                    if (ua2fEl.textContent.indexOf('\u4EE3\u7406') === -1) {
+                                        ua2fEl.textContent += ' (\u5728\u4EE3\u7406\u4E0B\u53EF\u80FD\u4E0D\u51C6\u786E)';
+                                    }
+                                }
+                            } else {
+                                // ip-api 失败，用 api.ip.sb 的数据兜底
+                                detailEl.textContent = '(' + ispCN + ')';
+                            }
+                        })
+                        .catch(function() {
+                            // JSONP 也失败了，用 api.ip.sb 的 ISP 兜底
+                            detailEl.textContent = '(' + ispCN + ')';
+                        });
+                })
+                .catch(function(err) {
+                    console.warn('IPv4 获取失败:', err);
+                    labelEl.textContent = 'IPv4: 获取失败';
+                    labelEl.className = 'ip-label error-text';
+                    detailEl.textContent = '';
+                });
+        }
+
+        /* ==========================================================
+         *  IPv6 获取 + 归属地
+         *  api.ip.sb/geoip 在纯 IPv4 环境下可能返回 IPv4，
+         *  所以用 JSONP 调 ip-api.com（它会根据 DNS 返回 IPv6）
+         * ========================================================== */
+        function loadIPv6() {
+            var labelEl = document.querySelector('#ip-ipv6 .ip-label');
+            var detailEl = document.querySelector('#ip-ipv6 .ip-detail');
+
+            // JSONP 调 ip-api.com，它支持纯 IPv6 域名解析
+            // 用 ipv6 查询接口
+            jsonp('http://edns.ip-api.com/json?lang=zh-CN')
+                .then(function(data) {
+                    var ipv6 = null;
+                    // edns.ip-api.com 返回的 dns 结构中有各个 DNS 服务器的结果
+                    if (data && data.dns) {
+                        for (var i = 0; i < data.dns.length; i++) {
+                            var d = data.dns[i];
+                            if (d.type === 'AAAA' && d.ip) {
+                                ipv6 = d.ip;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!ipv6) throw new Error('no ipv6');
+
+                    labelEl.textContent = ipv6;
+                    labelEl.className = 'ip-label';
+                    detailEl.textContent = '查询归属地中...';
+                    detailEl.className = 'ip-detail';
+
+                    // 查询归属地
+                    return jsonp('http://ip-api.com/json/' + encodeURIComponent(ipv6) + '?lang=zh-CN&fields=status,city,isp');
+                })
+                .then(function(geo) {
+                    if (!geo) return;
+                    if (geo.status === 'success') {
+                        detailEl.textContent = '(' + (geo.city || '') + ' \u00B7 ' + translateISP(geo.isp) + ')';
+                    } else {
+                        detailEl.textContent = '(归属地查询失败)';
+                        detailEl.className = 'ip-detail error-text';
+                    }
+                })
+                .catch(function(err) {
+                    console.warn('IPv6:', err.message || err);
+                    labelEl.textContent = 'IPv6: 不支持或不具备 IPv6 网络';
+                    labelEl.className = 'ip-label error-text';
+                    detailEl.textContent = '';
+                });
+        }
+
+        /* ==========================================================
+         *  端口切换：HTTP:80 ↔ HTTPS:443
+         * ========================================================== */
+        function jump_port() {
+            var proto = window.location.protocol;
+            var host = window.location.hostname;
+            var path = window.location.pathname;
+            var url;
+            if (proto === 'https:') {
+                url = 'http://' + host + ':80' + path;
+            } else {
+                url = 'https://' + host + ':443' + path;
             }
-            url += window.location.pathname;
             window.location.href = url;
         }
 
-        // 页面加载后执行的逻辑
-        window.onload = function () {
-            // 显示客户端 User-Agent
-            document.getElementById('js-user-agent').querySelector('p').textContent = navigator.userAgent;
-
-            // 检测页面协议是否为 https
-            if (window.location.protocol === 'https:') {
-                hideContentWithWarning();
-            }
-
-            // 使用 IP API 获取访客的 IP 信息
-            fetch('https://api.ip.sb/geoip')
-                .then(response => response.json())
-                .then(data => {
-                    const ipBlock = document.getElementById('ip').querySelector('p');
-                    ipBlock.textContent = `${data.ip} (${data.country})`;
-                    if (data.country_code !== 'CN') {
-                        ipBlock.style.color = 'red';
-                        ipBlock.textContent += ' 请检查是否使用了代理';
-                        document.getElementById('ua2f-status').querySelector('p').textContent += " (在代理下可能不准确)";
-                    }
-                })
-                .catch(error => console.error('Error:', error));
-        };
-
-        // 如果页面在 https 协议下，隐藏所有内容并显示警告
-        function hideContentWithWarning() {
-            document.querySelectorAll('.block').forEach(el => el.style.display = 'none');
-            const messageDiv = document.createElement('div');
-            messageDiv.textContent = '此网页无法在 https 下正常工作';
-            messageDiv.style.padding = '20px';
-            messageDiv.style.marginTop = '20px';
-            messageDiv.style.backgroundColor = '#ffcccc';
-            messageDiv.style.textAlign = 'center';
-            messageDiv.style.border = '1px solid #ffaaaa';
-            document.body.appendChild(messageDiv);
+        function updatePortDisplay() {
+            var proto = window.location.protocol.toUpperCase().replace(':', '');
+            var port = window.location.port || (window.location.protocol === 'https:' ? '443' : '80');
+            var targetProto = (proto === 'HTTPS') ? 'HTTP:80' : 'HTTPS:443';
+            document.getElementById('port-current').textContent = proto + ':' + port;
         }
+
+        /* ==========================================================
+         *  页面加载
+         * ========================================================== */
+        window.onload = function () {
+            document.getElementById('js-user-agent').querySelector('p').textContent = navigator.userAgent;
+            updatePortDisplay();
+            loadIPv4();
+            loadIPv6();
+            detectUA2F();
+        };
     </script>
 </head>
 <body>
+
     <div class="block" id="js-user-agent">
         <h2 class="title">用户端 User-Agent:</h2>
         <p></p>
     </div>
+
     <div class="block" id="ip">
         <h2 class="title">IP 地址:</h2>
-        <p>加载中...</p>
+        <div class="ip-row" id="ip-ipv4">
+            <span class="ip-label loading">IPv4 加载中...</span>
+            <span class="ip-detail"></span>
+        </div>
+        <div class="ip-row" id="ip-ipv6">
+            <span class="ip-label loading">IPv6 加载中...</span>
+            <span class="ip-detail"></span>
+        </div>
     </div>
+
     <div class="block" id="port">
-        <h2 class="title">端口:</h2>
-        <p>
-            <script>
-                document.write(window.location.port || '80');
-            </script>
-        </p>
-        <button onclick="jump_port(window.location.port === '80' ? 2333 : 80)">
-            切换端口
-        </button>
+        <h2 class="title">协议与端口:</h2>
+        <div id="port-info">
+            <p id="port-current"></p>
+            <p id="port-target"></p>
+        </div>
+        <button onclick="jump_port()">切换协议/端口</button>
     </div>
-    <div class="block" id="ua2f-status">
-        <h2 class="title"><a href="https://github.com/Zxilly/UA2F" target="_blank">UA2F</a> 推测状态:</h2>
-        <p>未知</p>
-    </div>
+
 </body>
 </html>
