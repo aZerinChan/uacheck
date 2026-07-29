@@ -1,155 +1,158 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" dir="ltr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User-Agent Display</title>
-    <style>
-        @media (prefers-color-scheme: light) {
-            body {
-                background-color: #f0f0f0;
-                color: #333;
-            }
-            .block {
-                background-color: #fff;
-                border-color: #ddd;
-            }
-            .title {
-                color: #333;
-            }
-            button {
-                background-color: #f8f9fa;
-                border-color: #ccc;
-                color: #333;
-            }
-        }
-        @media (prefers-color-scheme: dark) {
-            body {
-                background-color: #333;
-                color: #f0f0f0;
-            }
-            .block {
-                background-color: #444;
-                border-color: #666;
-            }
-            .title {
-                color: #fff;
-            }
-            button {
-                background-color: #555;
-                border-color: #777;
-                color: #fff;
-            }
-            a {
-                color: #0096ff;
-                text-decoration: none;
-            }
-            a:hover {
-                text-decoration: underline;
-            }
-        }
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            padding: 20px;
-        }
-        .block {
-            border: 1px solid #ddd;
-            padding: 20px;
-            margin-bottom: 20px;
-            border-radius: 5px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        @media (min-width: 1200px) {
-            .block {
-                max-width: 800px;
-                margin: 20px auto;
-            }
-            .title {
-                font-size: 24px;
-            }
-        }
-        button {
-            border: 1px solid #ccc;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            margin-top: 10px;
-        }
-    </style>
-    <script>
-        function jump_port(port) {
-            let url = window.location.protocol + '//' + window.location.hostname;
-            if (port !== 80) {
-                url += ':' + port;
-            }
-            url += window.location.pathname;
-            window.location.href = url;
-        }
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' http://httpbin.io https://httpbin.io http://httpbin.org https://httpbin.org http://eu.httpbin.org https://eu.httpbin.org http://echo.free.beeceptor.com https://echo.free.beeceptor.com http://postman-echo.com https://postman-echo.com; img-src 'self' data:; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-        // 页面加载后执行的逻辑
-        window.onload = function () {
-            // 显示客户端 User-Agent
-            document.getElementById('js-user-agent').querySelector('p').textContent = navigator.userAgent;
+    <title>UA 查询 · 服务器/客户端对比 | User-Agent 检测工具</title>
+    <meta name="description" content="在线对比服务器端获取的 User-Agent 与客户端真实 User-Agent，自动识别浏览器、操作系统、设备类型。支持 HTTP / HTTPS 访问，适用于 GitHub Pages 部署。">
+    <meta name="keywords" content="UA查询,User-Agent,UA检测,浏览器识别,UA对比,服务器UA,客户端UA,HTTP UA,HTTPS UA,UA Parser,UA 在线工具">
+    <meta name="author" content="陈年老陈皮">
+    <meta name="language" content="zh-CN">
+    <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+    <meta name="googlebot" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+    <meta name="bingbot" content="index,follow">
+    <meta name="rating" content="general">
+    <meta name="distribution" content="global">
+    <meta name="revisit-after" content="7 days">
+    <meta name="renderer" content="webkit">
+    <meta name="format-detection" content="telephone=no,address=no,email=no">
 
-            // 检测页面协议是否为 https
-            if (window.location.protocol === 'https:') {
-                hideContentWithWarning();
-            }
+    <link rel="canonical" href="https://ua.cnlcp.top/">
+    <link rel="alternate" media="only screen and (max-width: 640px)" href="https://ua.cnlcp.top/">
+    <link rel="alternate" hreflang="zh-Hans" href="https://ua.cnlcp.top/">
+    <link rel="alternate" hreflang="x-default" href="https://ua.cnlcp.top/">
 
-            // 使用 IP API 获取访客的 IP 信息
-            fetch('https://api.ip.sb/geoip')
-                .then(response => response.json())
-                .then(data => {
-                    const ipBlock = document.getElementById('ip').querySelector('p');
-                    ipBlock.textContent = `${data.ip} (${data.country})`;
-                    if (data.country_code !== 'CN') {
-                        ipBlock.style.color = 'red';
-                        ipBlock.textContent += ' 请检查是否使用了代理';
-                        document.getElementById('ua2f-status').querySelector('p').textContent += " (在代理下可能不准确)";
-                    }
-                })
-                .catch(error => console.error('Error:', error));
-        };
+    <link rel="icon" type="image/png" href="C6A1F13B-87DA-41B4-81C3-C8C7FA52DDC1.png">
+    <link rel="apple-touch-icon" href="C6A1F13B-87DA-41B4-81C3-C8C7FA52DDC1.png">
+    <link rel="shortcut icon" href="C6A1F13B-87DA-41B4-81C3-C8C7FA52DDC1.png">
+    <link rel="stylesheet" href="assets/css/style.css">
 
-        // 如果页面在 https 协议下，隐藏所有内容并显示警告
-        function hideContentWithWarning() {
-            document.querySelectorAll('.block').forEach(el => el.style.display = 'none');
-            const messageDiv = document.createElement('div');
-            messageDiv.textContent = '此网页无法在 https 下正常工作';
-            messageDiv.style.padding = '20px';
-            messageDiv.style.marginTop = '20px';
-            messageDiv.style.backgroundColor = '#ffcccc';
-            messageDiv.style.textAlign = 'center';
-            messageDiv.style.border = '1px solid #ffaaaa';
-            document.body.appendChild(messageDiv);
+    <meta name="theme-color" content="#f1f5f9" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
+    <meta name="application-name" content="UA 查询">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="UA 查询">
+
+    <meta name="applicable-device" content="pc,mobile">
+    <meta name="mobile-agent" content="format=html5;url=https://ua.cnlcp.top/">
+
+    <link rel="dns-prefetch" href="https://httpbin.io">
+    <link rel="dns-prefetch" href="https://httpbin.org">
+    <link rel="dns-prefetch" href="https://eu.httpbin.org">
+    <link rel="dns-prefetch" href="https://echo.free.beeceptor.com">
+    <link rel="dns-prefetch" href="https://postman-echo.com">
+
+    <!-- Open Graph / 社交分享 -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="UA 查询">
+    <meta property="og:title" content="UA 查询 · 服务器/客户端对比">
+    <meta property="og:description" content="在线对比服务器端获取的 User-Agent 与客户端真实 User-Agent，自动识别浏览器、操作系统、设备类型。">
+    <meta property="og:url" content="https://ua.cnlcp.top/">
+    <meta property="og:image" content="https://ua.cnlcp.top/C6A1F13B-87DA-41B4-81C3-C8C7FA52DDC1.png">
+    <meta property="og:image:width" content="200">
+    <meta property="og:image:height" content="200">
+    <meta property="og:image:alt" content="UA 查询 站点图标">
+    <meta property="og:locale" content="zh_CN">
+    <meta property="og:locale:alternate" content="zh_TW">
+    <meta property="og:locale:alternate" content="en_US">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="UA 查询 · 服务器/客户端对比">
+    <meta name="twitter:description" content="在线对比服务器端 User-Agent 与客户端真实 User-Agent，自动识别浏览器、操作系统、设备">
+    <meta name="twitter:image" content="https://ua.cnlcp.top/C6A1F13B-87DA-41B4-81C3-C8C7FA52DDC1.png">
+    <meta name="twitter:image:alt" content="UA 查询 站点图标">
+
+    <!-- JSON-LD 结构化数据（schema.org），多搜索引擎通用 -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://ua.cnlcp.top/#website",
+          "url": "https://ua.cnlcp.top/",
+          "name": "UA 查询",
+          "alternateName": "UA 查询 · 服务器/客户端对比",
+          "description": "在线对比服务器端获取的 User-Agent 与客户端真实 User-Agent，自动识别浏览器、操作系统、设备类型。",
+          "inLanguage": "zh-CN",
+          "publisher": { "@id": "https://ua.cnlcp.top/#publisher" }
+        },
+        {
+          "@type": "WebApplication",
+          "@id": "https://ua.cnlcp.top/#webapp",
+          "url": "https://ua.cnlcp.top/",
+          "name": "UA 查询",
+          "alternateName": "UA 查询 · 服务器/客户端对比",
+          "description": "在线对比服务器端获取的 User-Agent 与客户端真实 User-Agent，自动识别浏览器、操作系统、设备类型。",
+          "applicationCategory": "UtilitiesApplication",
+          "operatingSystem": "Any",
+          "browserRequirements": "Requires JavaScript",
+          "inLanguage": "zh-CN",
+          "isAccessibleForFree": true,
+          "featureList": [
+            "服务器端 User-Agent 获取（多源竞速）",
+            "客户端 User-Agent 实时读取",
+            "浏览器、引擎、版本自动识别",
+            "操作系统与设备类型识别",
+            "HTTP / HTTPS 协议自适应",
+            "服务器/客户端 UA 差异对比"
+          ],
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "CNY"
+          },
+          "author": { "@id": "https://ua.cnlcp.top/#publisher" },
+          "publisher": { "@id": "https://ua.cnlcp.top/#publisher" }
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://ua.cnlcp.top/#publisher",
+          "name": "陈年老陈皮的blog",
+          "url": "https://www.cnlcp.top"
         }
+      ]
+    }
     </script>
 </head>
 <body>
-    <div class="block" id="js-user-agent">
-        <h2 class="title">用户端 User-Agent:</h2>
-        <p></p>
-    </div>
-    <div class="block" id="ip">
-        <h2 class="title">IP 地址:</h2>
-        <p>加载中...</p>
-    </div>
-    <div class="block" id="port">
-        <h2 class="title">端口:</h2>
-        <p>
-            <script>
-                document.write(window.location.port || '80');
-            </script>
-        </p>
-        <button onclick="jump_port(window.location.port === '80' ? 2333 : 80)">
-            切换端口
-        </button>
-    </div>
-    <div class="block" id="ua2f-status">
-        <h2 class="title"><a href="https://github.com/Zxilly/UA2F" target="_blank">UA2F</a> 推测状态:</h2>
-        <p>未知</p>
-    </div>
+    <header>
+        <h1>UA 查询 · 服务器/客户端对比</h1>
+        <p class="subtitle">对比服务器端获取到的 User-Agent 与客户端真实 User-Agent</p>
+    </header>
+
+    <main>
+        <div class="skeleton" id="skeleton">
+            <div class="sk-card"><div class="sk-header"><span class="badge badge-server">服务器</span><span class="status-dot status-load"></span></div><div class="sk-line"></div><div class="sk-line"></div><div class="sk-line"></div><div class="sk-line"></div></div>
+            <div class="sk-card"><div class="sk-header"><span class="badge badge-client">客户端</span><span class="status-dot status-load"></span></div><div class="sk-line"></div><div class="sk-line"></div><div class="sk-line"></div><div class="sk-line"></div></div>
+        </div>
+
+        <div id="cards"></div>
+        <div class="note" id="note"></div>
+
+        <noscript>
+            <div style="max-width:1000px;margin:1.5rem auto;padding:1rem 1.2rem;border-radius:10px;background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.2);color:#92400e;font-size:0.85rem;line-height:1.7;">
+                <strong>本工具需要启用 JavaScript 才能查询 User-Agent。</strong><br>
+                客户端 UA 可在浏览器控制台执行 <code>navigator.userAgent</code> 查看；<br>
+                服务器端 UA 可通过命令获取：<code>curl https://httpbin.org/user-agent</code>
+            </div>
+        </noscript>
+    </main>
+
+    <script src="assets/js/main.js"></script>
+
+    <footer>
+        <a class="footer-box" href="https://www.cnlcp.top" target="_blank" rel="noopener noreferrer">
+            <div class="footer-bg"></div>
+            <img class="footer-avatar" src="D768DA54-64C7-4C6A-D170-54836BBFAE95.jpg" alt="陈年老陈皮头像">
+            <span class="footer-text">该网站由陈年老陈皮的blog提供支持</span>
+        </a>
+    </footer>
+
 </body>
 </html>
