@@ -6,9 +6,9 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' http://httpbin.io https://httpbin.io http://httpbin.org https://httpbin.org http://eu.httpbin.org https://eu.httpbin.org http://echo.free.beeceptor.com https://echo.free.beeceptor.com http://postman-echo.com https://postman-echo.com; img-src 'self' data:; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-    <title>UA 查询 · 服务器/客户端对比 | User-Agent 检测工具</title>
-    <meta name="description" content="在线对比服务器端获取的 User-Agent 与客户端真实 User-Agent，自动识别浏览器、操作系统、设备类型。支持 HTTP / HTTPS 访问，适用于 GitHub Pages 部署。">
-    <meta name="keywords" content="UA查询,User-Agent,UA检测,浏览器识别,UA对比,服务器UA,客户端UA,HTTP UA,HTTPS UA,UA Parser,UA 在线工具">
+    <title>UA 查询 · 服务器/客户端 UA 查询</title>
+    <meta name="description" content="在线查询服务器端获取到的 User-Agent 与客户端真实 User-Agent，自动识别浏览器、渲染引擎、操作系统与设备类型。支持 HTTP / HTTPS 访问，多源竞速获取。">
+    <meta name="keywords" content="UA查询,User-Agent,UA查询工具,UA检测,浏览器识别,服务器UA,客户端UA,HTTP UA,HTTPS UA,UA Parser,UA 在线工具,UA识别">
     <meta name="author" content="陈年老陈皮">
     <meta name="language" content="zh-CN">
     <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
@@ -49,8 +49,8 @@
     <!-- Open Graph / 社交分享 -->
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="UA 查询">
-    <meta property="og:title" content="UA 查询 · 服务器/客户端对比">
-    <meta property="og:description" content="在线对比服务器端获取的 User-Agent 与客户端真实 User-Agent，自动识别浏览器、操作系统、设备类型。">
+    <meta property="og:title" content="UA 查询 · 服务器/客户端 UA 查询">
+    <meta property="og:description" content="在线查询服务器端获取到的 User-Agent 与客户端真实 User-Agent，自动识别浏览器、渲染引擎、操作系统与设备类型。">
     <meta property="og:url" content="https://ua.cnlcp.top/">
     <meta property="og:image" content="https://ua.cnlcp.top/C6A1F13B-87DA-41B4-81C3-C8C7FA52DDC1.png">
     <meta property="og:image:width" content="200">
@@ -62,8 +62,8 @@
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="UA 查询 · 服务器/客户端对比">
-    <meta name="twitter:description" content="在线对比服务器端 User-Agent 与客户端真实 User-Agent，自动识别浏览器、操作系统、设备">
+    <meta name="twitter:title" content="UA 查询 · 服务器/客户端 UA 查询">
+    <meta name="twitter:description" content="在线查询服务器端获取到的 User-Agent 与客户端真实 User-Agent，自动识别浏览器、渲染引擎、操作系统与设备">
     <meta name="twitter:image" content="https://ua.cnlcp.top/C6A1F13B-87DA-41B4-81C3-C8C7FA52DDC1.png">
     <meta name="twitter:image:alt" content="UA 查询 站点图标">
 
@@ -77,8 +77,8 @@
           "@id": "https://ua.cnlcp.top/#website",
           "url": "https://ua.cnlcp.top/",
           "name": "UA 查询",
-          "alternateName": "UA 查询 · 服务器/客户端对比",
-          "description": "在线对比服务器端获取的 User-Agent 与客户端真实 User-Agent，自动识别浏览器、操作系统、设备类型。",
+          "alternateName": "UA 查询 · 服务器/客户端 UA 查询",
+          "description": "在线查询服务器端获取到的 User-Agent 与客户端真实 User-Agent，自动识别浏览器、渲染引擎、操作系统与设备类型。",
           "inLanguage": "zh-CN",
           "publisher": { "@id": "https://ua.cnlcp.top/#publisher" }
         },
@@ -87,8 +87,8 @@
           "@id": "https://ua.cnlcp.top/#webapp",
           "url": "https://ua.cnlcp.top/",
           "name": "UA 查询",
-          "alternateName": "UA 查询 · 服务器/客户端对比",
-          "description": "在线对比服务器端获取的 User-Agent 与客户端真实 User-Agent，自动识别浏览器、操作系统、设备类型。",
+          "alternateName": "UA 查询 · 服务器/客户端 UA 查询",
+          "description": "在线查询服务器端获取到的 User-Agent 与客户端真实 User-Agent，自动识别浏览器、渲染引擎、操作系统与设备类型。",
           "applicationCategory": "UtilitiesApplication",
           "operatingSystem": "Any",
           "browserRequirements": "Requires JavaScript",
@@ -100,7 +100,7 @@
             "浏览器、引擎、版本自动识别",
             "操作系统与设备类型识别",
             "HTTP / HTTPS 协议自适应",
-            "服务器/客户端 UA 差异对比"
+            "UA 在线查询工具"
           ],
           "offers": {
             "@type": "Offer",
@@ -122,8 +122,8 @@
 </head>
 <body>
     <header>
-        <h1>UA 查询 · 服务器/客户端对比</h1>
-        <p class="subtitle">对比服务器端获取到的 User-Agent 与客户端真实 User-Agent</p>
+        <h1>UA 查询 · 服务器/客户端 UA 查询</h1>
+        <p class="subtitle">查询服务器端获取到的 User-Agent 与客户端真实 User-Agent</p>
     </header>
 
     <main>
@@ -150,7 +150,7 @@
         <a class="footer-box" href="https://www.cnlcp.top" target="_blank" rel="noopener noreferrer">
             <div class="footer-bg"></div>
             <img class="footer-avatar" src="D768DA54-64C7-4C6A-D170-54836BBFAE95.jpg" alt="陈年老陈皮头像">
-            <span class="footer-text">该网站由陈年老陈皮的blog提供支持</span>
+            <span class="footer-text">该网站由 陈年老陈皮的blog 提供支持</span>
         </a>
     </footer>
 

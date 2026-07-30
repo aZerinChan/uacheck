@@ -184,16 +184,11 @@ function parseUA(ua) {
 
 // ===== 渲染函数 =====
 function infoRow(label, value, cls, isUa) {
-    if (isUa) {
-        return '<div class="info-row ua-row"><span class="info-label">' + label + '</span>' +
-            '<span class="info-value ' + cls + ' ua-value" id="ua-' + label.replace(/[^\w]/g, '') + '">' +
-            esc(value) +
-            '<button class="copy-btn" data-ua="' + esc(value) + '" type="button">复制</button>' +
-            '</span></div>';
-    }
     var display = value || '-';
+    var valClass = cls || '';
+    if (isUa) valClass += ' ua-value';
     return '<div class="info-row"><span class="info-label">' + label + '</span>' +
-        '<span class="info-value ' + cls + '">' + display + '</span></div>';
+        '<span class="info-value ' + valClass + '">' + esc(display) + '</span></div>';
 }
 
 function versionStr(name, ver) {
@@ -207,16 +202,16 @@ function osStr(parsed) {
 }
 
 function browserCard(d, parsed, protoTag) {
-    var uaId = 'server-ua';
     return '<div class="card" id="card-server"><div class="card-header">' +
         '<span class="badge badge-server">服务器</span>' +
         (protoTag || '') +
         '<span class="status-dot status-ok"></span></div>' +
         infoRow('User-Agent', d.ua, 'server-color', true) +
         infoRow('浏览器', versionStr(parsed.browser, parsed.browserVersion), 'server-color') +
+        infoRow('渲染引擎', versionStr(parsed.engine, parsed.engineVersion), 'server-color') +
         infoRow('操作系统', osStr(parsed), 'server-color') +
         infoRow('设备类型', parsed.device, 'server-color') +
-        infoRow('获取来源', d.source) +
+        infoRow('获取来源', d.source, 'server-color') +
         '</div>';
 }
 
@@ -226,9 +221,10 @@ function clientCard(ua, parsed) {
         '<span class="status-dot status-ok"></span></div>' +
         infoRow('User-Agent', ua, 'client-color', true) +
         infoRow('浏览器', versionStr(parsed.browser, parsed.browserVersion), 'client-color') +
+        infoRow('渲染引擎', versionStr(parsed.engine, parsed.engineVersion), 'client-color') +
         infoRow('操作系统', osStr(parsed), 'client-color') +
         infoRow('设备类型', parsed.device, 'client-color') +
-        infoRow('渲染引擎', versionStr(parsed.engine, parsed.engineVersion), 'client-color') +
+        infoRow('获取来源', 'navigator.userAgent', 'client-color') +
         '</div>';
 }
 
@@ -256,53 +252,15 @@ function detectingCard(side) {
         '</div></div>';
 }
 
-// 复制按钮交互
-function bindCopyButtons() {
-    var btns = document.querySelectorAll('.copy-btn');
-    btns.forEach(function (btn) {
-        btn.addEventListener('click', function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            var text = btn.getAttribute('data-ua') || '';
-            if (!text) return;
-            var done = function () {
-                var orig = btn.textContent;
-                btn.textContent = '已复制';
-                btn.classList.add('copied');
-                setTimeout(function () { btn.textContent = orig; btn.classList.remove('copied'); }, 1500);
-            };
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(text).then(done, function () { fallbackCopy(text, done); });
-            } else {
-                fallbackCopy(text, done);
-            }
-        });
-    });
-}
-
-function fallbackCopy(text, cb) {
-    try {
-        var ta = document.createElement('textarea');
-        ta.value = text;
-        ta.style.position = 'fixed';
-        ta.style.opacity = '0';
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
-        if (cb) cb();
-    } catch (e) { /* ignore */ }
-}
-
-// 对比提示
+// 提示信息：仅服务器与客户端 UA 不一致时显示
 function diffNote(serverUA, clientUA) {
     var note = document.getElementById('note');
     if (!serverUA || !clientUA) return;
     if (serverUA === clientUA) {
-        note.innerHTML = '<strong>对比：</strong>服务器端获取的 UA 与客户端真实 UA <span style="color:#22c55e;font-weight:600">完全一致</span>，未发现伪装或代理改写。';
-    } else {
-        note.innerHTML = '<strong>对比：</strong>服务器端获取的 UA 与客户端真实 UA <span style="color:#eab308;font-weight:600">不一致</span>，可能存在代理改写、UA 切换插件或隐私保护机制。';
+        note.className = 'note';
+        return;
     }
+    note.innerHTML = '<strong>提示：</strong>服务器端获取的 UA 与客户端真实 UA 不一致，可能存在代理改写、UA 切换插件或隐私保护机制。';
     note.className = 'note show';
 }
 
@@ -310,7 +268,7 @@ function diffNote(serverUA, clientUA) {
 function startDetection() {
     var box = document.getElementById('cards');
     var note = document.getElementById('note');
-    var protoTag = '<span class="proto-tag">' + (PROTO === 'https:' ? 'HTTPS' : 'HTTP') + '</span>';
+    var protoTag = '<span class="tag">' + (PROTO === 'https:' ? 'HTTPS' : 'HTTP') + '</span>';
 
     box.innerHTML = detectingCard('server') + detectingCard('client');
     note.className = 'note';
@@ -347,12 +305,7 @@ function startDetection() {
             note.innerHTML = '<strong>诊断：</strong>尝试的源：' + SERVER_API_LIST.map(function (a) { return a.name; }).join('、') + '<br>最近错误：' + esc(reasons.join('；'));
             note.className = 'note show';
         }
-    }).then(function () {
-        bindCopyButtons();
     });
-
-    // 客户端卡片也需要绑定复制按钮
-    setTimeout(bindCopyButtons, 50);
 }
 
 startDetection();
